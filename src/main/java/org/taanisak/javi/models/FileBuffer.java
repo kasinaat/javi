@@ -11,12 +11,11 @@ public class FileBuffer extends Buffer { //Receiver class
     private Path savePath = null;
 
     public FileBuffer(Path path) throws IOException {
-        super();
         open(path);
     }
 
     public FileBuffer() {
-
+        super();
     }
 
     public void save() throws IOException {
@@ -36,6 +35,7 @@ public class FileBuffer extends Buffer { //Receiver class
         File file = path.toFile();
         ArrayList<StringBuffer> lineList = super.getLines();
         if (file.exists() && !file.isDirectory()) {
+            lineList.clear();
             for (String line : Files.readAllLines(path, Charset.defaultCharset())) {
                 StringBuffer sb = new StringBuffer(line);
                 sb.append('\n');
@@ -44,11 +44,16 @@ public class FileBuffer extends Buffer { //Receiver class
             int row = lineList.size();
             int col = lineList.get(lineList.size() - 1).length();
             setCursor(row, col);
+
         }
     }
 
     @Override
     public void insert(char c) {
         super.insert(c);
+    }
+
+    public boolean hasLine(int lineNumber) {
+        return lineNumber >= 0 || lineNumber <= getNumberOfLines();
     }
 }

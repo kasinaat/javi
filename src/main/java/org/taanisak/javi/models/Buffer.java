@@ -45,6 +45,9 @@ public class Buffer {
             if (col >= 0 && col <= lines.get(row).length()) {
                 cursorRow = row;
                 cursorColumn = col;
+            } else {
+                cursorRow = row;
+                cursorColumn = lines.get(row).length();
             }
         }
     }

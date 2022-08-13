@@ -26,9 +26,9 @@ public class Editor {
 
     public void start() throws IOException {
         terminal.clearScreen();
-        terminal.flush();
         show();
         terminal.setCursorPosition(currentPosition.col, currentPosition.row);
+        terminal.flush();
 
         while (true) {
             KeyStroke keyStroke = terminal.pollInput();
@@ -51,7 +51,6 @@ public class Editor {
                 terminal.putCharacter(line.charAt(j));
             }
         }
-        terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
         terminal.flush();
     }
 
@@ -79,28 +78,54 @@ public class Editor {
             buffer.save();
         } else {
             buffer.insert(keyStroke.getCharacter());
+            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
+            terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
             show();
         }
     }
 
     private void moveUp() throws IOException {
         //TODO need to check available dimensions
-        buffer.setCursor(buffer.getCursorRow() - 1, buffer.getCursorColumn());
-        show();
+        if(buffer.hasLine(buffer.getCursorRow() - 1)) {
+            buffer.setCursor(buffer.getCursorRow() - 1, buffer.getCursorColumn());
+            show();
+            int prevLineLength = buffer.getLine(buffer.getCursorRow()).length();
+            int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
+            if(prevLineLength < currentLineLength) {
+                terminal.setCursorPosition(prevLineLength, buffer.getCursorRow() );
+            } else {
+                terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
+            }
+            terminal.flush();
+        }
     }
 
     public void moveDown() throws IOException {
-        buffer.setCursor(buffer.getCursorRow() + 1, buffer.getCursorColumn());
-        show();
+        if(buffer.hasLine(buffer.getCursorRow() + 1)) {
+            buffer.setCursor(buffer.getCursorRow() + 1, buffer.getCursorColumn());
+            show();
+            int nextLineLength = buffer.getLine(buffer.getCursorRow()).length();
+            int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
+            if(nextLineLength > currentLineLength) {
+                terminal.setCursorPosition(nextLineLength, buffer.getCursorRow());
+            } else {
+                terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
+            }
+            terminal.flush();
+        }
     }
 
     public void moveLeft() throws IOException {
         buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() - 1);
         show();
+        terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
+        terminal.flush();
     }
 
     public void moveRight() throws IOException {
         buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() + 1);
         show();
+        terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
+        terminal.flush();
     }
 }
