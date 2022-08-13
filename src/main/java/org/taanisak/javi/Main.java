@@ -1,4 +1,5 @@
 package org.taanisak.javi;
+
 import org.taanisak.javi.models.FileBuffer;
 import org.taanisak.javi.views.Editor;
 
@@ -13,8 +14,7 @@ public class Main {
         if (args.length > 0) {
             Path path = Paths.get(args[0]);
             fileBuffer = new FileBuffer(path);
-        }
-        else {
+        } else {
             fileBuffer = new FileBuffer();
         }
         Editor editor = new Editor(fileBuffer);

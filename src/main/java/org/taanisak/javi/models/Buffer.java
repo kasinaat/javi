@@ -61,8 +61,7 @@ public class Buffer {
             cursorRow--;
             cursorColumn = lines.get(cursorRow).length();
             lines.get(cursorRow).append(lines.remove(cursorRow + 1));
-        }
-        else if (cursorColumn > 0) {
+        } else if (cursorColumn > 0) {
             lines.get(cursorRow).deleteCharAt(--cursorColumn);
         }
     }

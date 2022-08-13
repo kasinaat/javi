@@ -91,7 +91,7 @@ public class Editor {
 
     private void show() throws IOException {
         terminal.clearScreen();
-        if(buffer.isEmpty()) return;
+        if (buffer.isEmpty()) return;
         for (int i = 0; i < buffer.getNumberOfLines(); i++) {
             String line = buffer.getLine(i);
             for (int j = 0; j < line.length(); j++) {
@@ -131,6 +131,7 @@ public class Editor {
             show();
         }
     }
+
     private void moveUp() throws IOException {
         //TODO need to check available dimensions
         buffer.setCursor(buffer.getCursorRow() - 1, buffer.getCursorColumn());
