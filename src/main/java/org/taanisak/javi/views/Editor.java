@@ -16,6 +16,7 @@ public class Editor {
     private final Position origin = new Position(0, 0);
     private final Position currentPosition = new Position(0, 0);
     private final FileBuffer buffer;
+
     public Editor(FileBuffer buffer) throws IOException {
         this.buffer = buffer;
         terminal = new DefaultTerminalFactory().createTerminal();
@@ -86,13 +87,13 @@ public class Editor {
 
     private void moveUp() throws IOException {
         //TODO need to check available dimensions
-        if(buffer.hasLine(buffer.getCursorRow() - 1)) {
+        if (buffer.hasLine(buffer.getCursorRow() - 1)) {
             buffer.setCursor(buffer.getCursorRow() - 1, buffer.getCursorColumn());
             show();
             int prevLineLength = buffer.getLine(buffer.getCursorRow()).length();
             int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
-            if(prevLineLength < currentLineLength) {
-                terminal.setCursorPosition(prevLineLength, buffer.getCursorRow() );
+            if (prevLineLength < currentLineLength) {
+                terminal.setCursorPosition(prevLineLength, buffer.getCursorRow());
             } else {
                 terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
             }
@@ -101,12 +102,12 @@ public class Editor {
     }
 
     public void moveDown() throws IOException {
-        if(buffer.hasLine(buffer.getCursorRow() + 1)) {
+        if (buffer.hasLine(buffer.getCursorRow() + 1)) {
             buffer.setCursor(buffer.getCursorRow() + 1, buffer.getCursorColumn());
             show();
             int nextLineLength = buffer.getLine(buffer.getCursorRow()).length();
             int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
-            if(nextLineLength > currentLineLength) {
+            if (nextLineLength > currentLineLength) {
                 terminal.setCursorPosition(nextLineLength, buffer.getCursorRow());
             } else {
                 terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
