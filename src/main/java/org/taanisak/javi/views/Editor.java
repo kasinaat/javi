@@ -16,6 +16,7 @@ import org.taanisak.javi.models.Position;
 import java.io.IOException;
 
 public class Editor {
+    private static final int TAB_SIZE = 4;
     private final Terminal terminal;
     private final int width;
     private final int height;
@@ -151,12 +152,21 @@ public class Editor {
             int col = buffer.getCursorColumn();
             show();
             buffer.setCursor(row, col);
+        } else if (keyStroke.getKeyType().equals(KeyType.Tab)) {
+            for (int i = 0; i < TAB_SIZE; i++) {
+                buffer.insert(' ');
+            }
+            updateBufferAndScreen();
         } else {
             buffer.insert(keyStroke.getCharacter());
-            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
-            editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
-            show();
+            updateBufferAndScreen();
         }
+    }
+
+    private void updateBufferAndScreen() throws IOException {
+        buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
+        editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
+        show();
     }
 
     private void moveUp() throws IOException {
