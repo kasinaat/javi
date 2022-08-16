@@ -32,9 +32,11 @@ public class Editor {
         terminal.setCursorVisible(true);
         height = terminal.getTerminalSize().getRows();
         width = terminal.getTerminalSize().getColumns();
+    }
+
+    public void start() throws IOException {
         displayWelcomeScreen();
         waitForCommands();
-
     }
 
     private void waitForCommands() throws IOException {
