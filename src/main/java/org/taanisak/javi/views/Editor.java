@@ -98,6 +98,8 @@ public class Editor {
         terminal.putString(String.format("'CTRL + q' - Quit"));
         nextLine();
         terminal.putString(String.format("'CTRL + s' - Save file"));
+        nextLine();
+        terminal.putString(String.format("'ESC' - To see the welcome screen"));
         terminal.flush();
     }
 
@@ -190,14 +192,28 @@ public class Editor {
     }
 
     public void moveLeft() throws IOException {
-        buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() - 1);
+        if (buffer.getCursorRow() == 0 && buffer.getCursorColumn() == 0) return;
+
+        if (buffer.getCursorColumn() == 0 && buffer.hasLine(buffer.getCursorRow() - 1)) {
+            buffer.setCursor(buffer.getCursorRow() - 1, buffer.getLine(buffer.getCursorRow() - 1).length());
+        } else {
+            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() - 1);
+        }
         show();
         editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
         editorScreen.refresh();
     }
 
     public void moveRight() throws IOException {
-        buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() + 1);
+        int numberOfRows = buffer.getNumberOfLines();
+        if (buffer.getCursorRow() == numberOfRows && buffer.getCursorColumn() == buffer.getLine(numberOfRows).length())
+            return;
+
+        if (buffer.getCursorColumn() == buffer.getLine(buffer.getCursorRow()).length()) {
+            buffer.setCursor(buffer.getCursorRow() + 1, 0);
+        } else {
+            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() + 1);
+        }
         show();
         editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
         editorScreen.refresh();
