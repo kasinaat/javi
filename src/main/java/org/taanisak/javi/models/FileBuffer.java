@@ -2,13 +2,12 @@ package org.taanisak.javi.models;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 
 public class FileBuffer extends Buffer { //Receiver class
-    private Path savePath = null;
+    public Path savePath = null;
 
     public FileBuffer(Path path) throws IOException {
         open(path);
@@ -44,7 +43,6 @@ public class FileBuffer extends Buffer { //Receiver class
             int row = lineList.size();
             int col = lineList.get(lineList.size() - 1).length();
             setCursor(row, col);
-
         }
     }
 

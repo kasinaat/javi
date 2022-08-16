@@ -18,6 +18,5 @@ public class Main {
             fileBuffer = new FileBuffer();
         }
         Editor editor = new Editor(fileBuffer);
-        editor.start();
     }
 }

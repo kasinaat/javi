@@ -1,7 +1,13 @@
 package org.taanisak.javi.views;
 
+import com.googlecode.lanterna.SGR;
+import com.googlecode.lanterna.TerminalPosition;
+import com.googlecode.lanterna.TextCharacter;
+import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.input.KeyStroke;
 import com.googlecode.lanterna.input.KeyType;
+import com.googlecode.lanterna.screen.Screen;
+import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
 import org.taanisak.javi.models.FileBuffer;
@@ -14,8 +20,11 @@ public class Editor {
     private final int width;
     private final int height;
     private final Position origin = new Position(0, 0);
+
     private final Position currentPosition = new Position(0, 0);
     private final FileBuffer buffer;
+    Screen editorScreen;
+    private boolean isEditMode;
 
     public Editor(FileBuffer buffer) throws IOException {
         this.buffer = buffer;
@@ -23,19 +32,30 @@ public class Editor {
         terminal.setCursorVisible(true);
         height = terminal.getTerminalSize().getRows();
         width = terminal.getTerminalSize().getColumns();
+        displayWelcomeScreen();
+        waitForCommands();
+
     }
 
-    public void start() throws IOException {
-        terminal.clearScreen();
-        show();
-        terminal.setCursorPosition(currentPosition.col, currentPosition.row);
-        terminal.flush();
-
+    private void waitForCommands() throws IOException {
         while (true) {
             KeyStroke keyStroke = terminal.pollInput();
             if (keyStroke != null) {
-                editBuffer(keyStroke);
+                if (keyStroke.isCtrlDown() && keyStroke.getCharacter() == 'e') {
+                    initEditMode();
+                } else if (keyStroke.getKeyType().equals(KeyType.Escape)) {
+                    exitEditMode();
+                } else if (keyStroke.isCtrlDown() && keyStroke.getCharacter() == 's') {
+                    saveFile();
+                } else if (keyStroke.isCtrlDown() && keyStroke.getCharacter() == 'q') {
+                    closeEditor();
+                    break;
+                } else if (isEditMode) {
+                    editBuffer(keyStroke);
+                }
+
             }
+
             try {
                 Thread.sleep(100);
             } catch (InterruptedException ie) {
@@ -44,15 +64,67 @@ public class Editor {
         }
     }
 
-    private void show() throws IOException {
+    private void closeEditor() throws IOException {
+        editorScreen.close();
+        terminal.close();
+    }
+
+    private void saveFile() throws IOException {
+        buffer.save();
+    }
+
+    private void exitEditMode() throws IOException {
+        isEditMode = false;
+        displayWelcomeScreen();
+    }
+
+    private void displayWelcomeScreen() throws IOException {
         terminal.clearScreen();
+        terminal.setCursorPosition(0, 0);
+        terminal.enableSGR(SGR.BOLD);
+        terminal.putString("JAVI - Your Text Editor");
+        terminal.disableSGR(SGR.BOLD);
+        nextLine();
+        terminal.putString(String.format("Current File : %s", buffer.savePath));
+        nextLine();
+        terminal.enableSGR(SGR.BOLD);
+        terminal.putString(String.format("Commands"));
+        terminal.disableSGR(SGR.BOLD);
+        nextLine();
+        terminal.putString(String.format("'CTRL + e' - Edit Selected file"));
+        nextLine();
+        terminal.putString(String.format("'CTRL + q' - Quit"));
+        nextLine();
+        terminal.putString(String.format("'CTRL + s' - Save file"));
+        terminal.flush();
+    }
+
+    private void nextLine() throws IOException {
+        terminal.setCursorPosition(0, terminal.getCursorPosition().getRow() + 1);
+    }
+
+    public void initEditMode() throws IOException {
+        this.isEditMode = true;
+        editorScreen = new TerminalScreen(terminal);
+        editorScreen.startScreen();
+        terminal.clearScreen();
+        show();
+        editorScreen.setCursorPosition(new TerminalPosition(currentPosition.col, currentPosition.row));
+        editorScreen.refresh();
+    }
+
+    private void show() throws IOException {
         for (int i = 0; i < buffer.getNumberOfLines(); i++) {
             String line = buffer.getLine(i);
             for (int j = 0; j < line.length(); j++) {
-                terminal.putCharacter(line.charAt(j));
+                if (line.charAt(j) == '\n') continue;
+                editorScreen.setCharacter(j, i, new TextCharacter(
+                        line.charAt(j),
+                        TextColor.ANSI.DEFAULT,
+                        TextColor.ANSI.DEFAULT));
             }
         }
-        terminal.flush();
+        editorScreen.refresh();
     }
 
     private void editBuffer(KeyStroke keyStroke) throws IOException {
@@ -75,12 +147,10 @@ public class Editor {
             int col = buffer.getCursorColumn();
             show();
             buffer.setCursor(row, col);
-        } else if (keyStroke.isCtrlDown() && keyStroke.getCharacter() == 's') {
-            buffer.save();
         } else {
             buffer.insert(keyStroke.getCharacter());
             buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
-            terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
+            editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
             show();
         }
     }
@@ -93,11 +163,12 @@ public class Editor {
             int prevLineLength = buffer.getLine(buffer.getCursorRow()).length();
             int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
             if (prevLineLength < currentLineLength) {
-                terminal.setCursorPosition(prevLineLength, buffer.getCursorRow());
+                editorScreen.setCursorPosition(new TerminalPosition(prevLineLength, buffer.getCursorRow()));
+
             } else {
-                terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
+                editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
             }
-            terminal.flush();
+            editorScreen.refresh();
         }
     }
 
@@ -108,25 +179,25 @@ public class Editor {
             int nextLineLength = buffer.getLine(buffer.getCursorRow()).length();
             int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
             if (nextLineLength > currentLineLength) {
-                terminal.setCursorPosition(nextLineLength, buffer.getCursorRow());
+                editorScreen.setCursorPosition(new TerminalPosition(nextLineLength, buffer.getCursorRow()));
             } else {
-                terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
+                editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
             }
-            terminal.flush();
+            editorScreen.refresh();
         }
     }
 
     public void moveLeft() throws IOException {
         buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() - 1);
         show();
-        terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
-        terminal.flush();
+        editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
+        editorScreen.refresh();
     }
 
     public void moveRight() throws IOException {
         buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() + 1);
         show();
-        terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
-        terminal.flush();
+        editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
+        editorScreen.refresh();
     }
 }
