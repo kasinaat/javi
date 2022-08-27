@@ -14,14 +14,13 @@ import org.taanisak.javi.models.FileBuffer;
 import org.taanisak.javi.models.Position;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 public class Editor {
     private static final int TAB_SIZE = 4;
     private final Terminal terminal;
     private final int width;
     private final int height;
-    private final Position origin = new Position(0, 0);
-
     private final Position currentPosition = new Position(0, 0);
     private final FileBuffer buffer;
     Screen editorScreen;
@@ -91,16 +90,16 @@ public class Editor {
         terminal.putString(String.format("Current File : %s", buffer.savePath));
         nextLine();
         terminal.enableSGR(SGR.BOLD);
-        terminal.putString(String.format("Commands"));
+        terminal.putString("Commands");
         terminal.disableSGR(SGR.BOLD);
         nextLine();
-        terminal.putString(String.format("'CTRL + e' - Edit Selected file"));
+        terminal.putString("'CTRL + e' - Edit Selected file");
         nextLine();
-        terminal.putString(String.format("'CTRL + q' - Quit"));
+        terminal.putString("'CTRL + q' - Quit");
         nextLine();
-        terminal.putString(String.format("'CTRL + s' - Save file"));
+        terminal.putString("'CTRL + s' - Save file");
         nextLine();
-        terminal.putString(String.format("'ESC' - To see the welcome screen"));
+        terminal.putString("'ESC' - To see the welcome screen");
         terminal.flush();
     }
 
@@ -119,16 +118,24 @@ public class Editor {
     }
 
     private void show() throws IOException {
-        for (int i = 0; i < buffer.getNumberOfLines(); i++) {
-            String line = buffer.getLine(i);
-            for (int j = 0; j < line.length(); j++) {
-                if (line.charAt(j) == '\n') continue;
-                editorScreen.setCharacter(j, i, new TextCharacter(
-                        line.charAt(j),
-                        TextColor.ANSI.DEFAULT,
-                        TextColor.ANSI.DEFAULT));
+        int column = 0;
+        int row = 0;
+        terminal.clearScreen();
+        editorScreen.clear();
+        String content = buffer.content.report(0, buffer.contentLength);
+        for (int i = 0; i < content.length(); i++) {
+            if (content.charAt(i) == '\n') {
+                column++;
+                row = 0;
+                continue;
             }
+            editorScreen.setCharacter(row, column, new TextCharacter(
+                    content.charAt(i),
+                    TextColor.ANSI.DEFAULT,
+                    TextColor.ANSI.DEFAULT));
+            row++;
         }
+        editorScreen.setCursorPosition(currentPosition.getAsTerminalPosition());
         editorScreen.refresh();
     }
 
@@ -143,89 +150,48 @@ public class Editor {
             moveDown();
         } else if (keyStroke.getKeyType().equals(KeyType.Enter)) {
             buffer.insert('\n');
-            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
-            terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
+            buffer.numberOfLines++;
+            currentPosition.col++;
+            currentPosition.setRow(0);
             show();
         } else if (keyStroke.getKeyType().equals(KeyType.Backspace)) {
             buffer.delete();
-            int row = buffer.getCursorRow();
-            int col = buffer.getCursorColumn();
+            currentPosition.row--;
             show();
-            buffer.setCursor(row, col);
         } else if (keyStroke.getKeyType().equals(KeyType.Tab)) {
             for (int i = 0; i < TAB_SIZE; i++) {
                 buffer.insert(' ');
             }
-            updateBufferAndScreen();
+            currentPosition.row += TAB_SIZE;
+            show();
         } else {
             buffer.insert(keyStroke.getCharacter());
-            updateBufferAndScreen();
+            currentPosition.row++;
+            show();
         }
-    }
-
-    private void updateBufferAndScreen() throws IOException {
-        buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
-        editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
-        show();
     }
 
     private void moveUp() throws IOException {
-        //TODO need to check available dimensions
-        if (buffer.hasLine(buffer.getCursorRow() - 1)) {
-            buffer.setCursor(buffer.getCursorRow() - 1, buffer.getCursorColumn());
-            show();
-            int prevLineLength = buffer.getLine(buffer.getCursorRow()).length();
-            int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
-            if (prevLineLength < currentLineLength) {
-                editorScreen.setCursorPosition(new TerminalPosition(prevLineLength, buffer.getCursorRow()));
-
-            } else {
-                editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
-            }
-            editorScreen.refresh();
-        }
+        currentPosition.setColumn(currentPosition.col > 0 ? currentPosition.col-1 : currentPosition.col);
+        editorScreen.setCursorPosition(currentPosition.getAsTerminalPosition());
+        editorScreen.refresh();
     }
 
     public void moveDown() throws IOException {
-        if (buffer.hasLine(buffer.getCursorRow() + 1)) {
-            buffer.setCursor(buffer.getCursorRow() + 1, buffer.getCursorColumn());
-            show();
-            int nextLineLength = buffer.getLine(buffer.getCursorRow()).length();
-            int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
-            if (nextLineLength > currentLineLength) {
-                editorScreen.setCursorPosition(new TerminalPosition(nextLineLength, buffer.getCursorRow()));
-            } else {
-                editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
-            }
-            editorScreen.refresh();
-        }
+        currentPosition.setColumn(currentPosition.col < buffer.numberOfLines ? currentPosition.col+1 : currentPosition.col);
+        editorScreen.setCursorPosition(currentPosition.getAsTerminalPosition());
+        editorScreen.refresh();
     }
 
     public void moveLeft() throws IOException {
-        if (buffer.getCursorRow() == 0 && buffer.getCursorColumn() == 0) return;
-
-        if (buffer.getCursorColumn() == 0 && buffer.hasLine(buffer.getCursorRow() - 1)) {
-            buffer.setCursor(buffer.getCursorRow() - 1, buffer.getLine(buffer.getCursorRow() - 1).length());
-        } else {
-            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() - 1);
-        }
-        show();
-        editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
+        currentPosition.setRow(currentPosition.row > 0 ? currentPosition.row-1 : currentPosition.row);
+        editorScreen.setCursorPosition(currentPosition.getAsTerminalPosition());
         editorScreen.refresh();
     }
 
     public void moveRight() throws IOException {
-        int numberOfRows = buffer.getNumberOfLines();
-        if (buffer.getCursorRow() == numberOfRows && buffer.getCursorColumn() == buffer.getLine(numberOfRows).length())
-            return;
-
-        if (buffer.getCursorColumn() == buffer.getLine(buffer.getCursorRow()).length()) {
-            buffer.setCursor(buffer.getCursorRow() + 1, 0);
-        } else {
-            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() + 1);
-        }
-        show();
-        editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
+        currentPosition.setRow(currentPosition.row < buffer.lineNumberVsLength.get(buffer.currentLineNumber) ? currentPosition.row+1 : currentPosition.row);
+        editorScreen.setCursorPosition(currentPosition.getAsTerminalPosition());
         editorScreen.refresh();
     }
 }
