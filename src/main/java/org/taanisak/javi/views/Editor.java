@@ -2,8 +2,7 @@ package org.taanisak.javi.views;
 
 import com.googlecode.lanterna.SGR;
 import com.googlecode.lanterna.TerminalPosition;
-import com.googlecode.lanterna.TextCharacter;
-import com.googlecode.lanterna.TextColor;
+import com.googlecode.lanterna.graphics.TextGraphics;
 import com.googlecode.lanterna.input.KeyStroke;
 import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.screen.Screen;
@@ -11,9 +10,11 @@ import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
 import org.taanisak.javi.models.FileBuffer;
+import org.taanisak.javi.models.OperationType;
 import org.taanisak.javi.models.Position;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
 public class Editor {
     private static final int TAB_SIZE = 4;
@@ -113,21 +114,21 @@ public class Editor {
         editorScreen = new TerminalScreen(terminal);
         editorScreen.startScreen();
         terminal.clearScreen();
-        show();
+
+        render();
         editorScreen.setCursorPosition(new TerminalPosition(currentPosition.col, currentPosition.row));
         editorScreen.refresh();
     }
 
-    private void show() throws IOException {
+    private void render() throws IOException {
+        editorScreen.clear();
         for (int i = 0; i < buffer.getNumberOfLines(); i++) {
             String line = buffer.getLine(i);
-            for (int j = 0; j < line.length(); j++) {
-                if (line.charAt(j) == '\n') continue;
-                editorScreen.setCharacter(j, i, new TextCharacter(
-                        line.charAt(j),
-                        TextColor.ANSI.DEFAULT,
-                        TextColor.ANSI.DEFAULT));
-            }
+//            for (int j = startColumn; j < line.length(); j++) {
+//                if (line.charAt(j) == '\n') continue;
+            TextGraphics textGraphics = editorScreen.newTextGraphics();
+            textGraphics.putString(0, i, line);
+//            }
         }
         editorScreen.refresh();
     }
@@ -143,37 +144,35 @@ public class Editor {
             moveDown();
         } else if (keyStroke.getKeyType().equals(KeyType.Enter)) {
             buffer.insert('\n');
-            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
-            terminal.setCursorPosition(buffer.getCursorColumn(), buffer.getCursorRow());
-            show();
+            updateBufferAndScreen(OperationType.NEWLINE);
         } else if (keyStroke.getKeyType().equals(KeyType.Backspace)) {
             buffer.delete();
-            int row = buffer.getCursorRow();
-            int col = buffer.getCursorColumn();
-            show();
-            buffer.setCursor(row, col);
+            updateBufferAndScreen(OperationType.DELETE);
         } else if (keyStroke.getKeyType().equals(KeyType.Tab)) {
             for (int i = 0; i < TAB_SIZE; i++) {
                 buffer.insert(' ');
             }
-            updateBufferAndScreen();
+            updateBufferAndScreen(OperationType.INSERT);
         } else {
             buffer.insert(keyStroke.getCharacter());
-            updateBufferAndScreen();
+            updateBufferAndScreen(OperationType.INSERT);
         }
     }
 
-    private void updateBufferAndScreen() throws IOException {
+    private void updateBufferAndScreen(OperationType operationType) throws IOException {
         buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
         editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
-        show();
+        if(operationType.equals(OperationType.INSERT))
+            render();
+        else
+            render();
+
     }
 
     private void moveUp() throws IOException {
-        //TODO need to check available dimensions
         if (buffer.hasLine(buffer.getCursorRow() - 1)) {
             buffer.setCursor(buffer.getCursorRow() - 1, buffer.getCursorColumn());
-            show();
+//            show();
             int prevLineLength = buffer.getLine(buffer.getCursorRow()).length();
             int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
             if (prevLineLength < currentLineLength) {
@@ -189,7 +188,7 @@ public class Editor {
     public void moveDown() throws IOException {
         if (buffer.hasLine(buffer.getCursorRow() + 1)) {
             buffer.setCursor(buffer.getCursorRow() + 1, buffer.getCursorColumn());
-            show();
+//            show();
             int nextLineLength = buffer.getLine(buffer.getCursorRow()).length();
             int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
             if (nextLineLength > currentLineLength) {
@@ -209,7 +208,7 @@ public class Editor {
         } else {
             buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() - 1);
         }
-        show();
+//        show();
         editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
         editorScreen.refresh();
     }
@@ -224,7 +223,7 @@ public class Editor {
         } else {
             buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() + 1);
         }
-        show();
+//        show();
         editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
         editorScreen.refresh();
     }
