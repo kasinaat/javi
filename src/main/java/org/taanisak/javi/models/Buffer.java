@@ -53,10 +53,11 @@ public class Buffer {
     }
 
     public void insert(char c) {
-        lines.get(cursorRow).insert(cursorColumn++, c);
         if (c == '\n') {
             addNewLine();
+            return;
         }
+        lines.get(cursorRow).insert(cursorColumn++, c);
     }
 
     public void delete() {
@@ -70,7 +71,8 @@ public class Buffer {
     }
 
     public void addNewLine() {
-        StringBuffer newLine = new StringBuffer("");
+        StringBuffer newLine = new StringBuffer(lines.get(cursorRow).substring(cursorColumn));
+        lines.get(cursorRow).delete(cursorColumn, lines.get(cursorRow).length());
         lines.add(++cursorRow, newLine);
         this.cursorColumn = 0;
     }

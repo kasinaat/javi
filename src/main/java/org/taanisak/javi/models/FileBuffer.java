@@ -25,6 +25,7 @@ public class FileBuffer extends Buffer { //Receiver class
         BufferedWriter out = new BufferedWriter(new FileWriter(path.toFile()), 32768);
         for (StringBuffer line : getLines()) {
             out.write(line.toString());
+            out.write(System.lineSeparator());
         }
         out.close();
     }
@@ -37,7 +38,6 @@ public class FileBuffer extends Buffer { //Receiver class
             lineList.clear();
             for (String line : Files.readAllLines(path, Charset.defaultCharset())) {
                 StringBuffer sb = new StringBuffer(line);
-                sb.append('\n');
                 lineList.add(sb);
             }
             int row = lineList.size();

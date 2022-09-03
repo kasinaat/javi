@@ -69,7 +69,8 @@ public class Editor {
     }
 
     private void closeEditor() throws IOException {
-        editorScreen.close();
+        if(editorScreen != null)
+            editorScreen.close();
         terminal.close();
     }
 
