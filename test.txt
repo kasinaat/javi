@@ -5,7 +5,7 @@ public class Solution {
         Scanner scanner = new Scanner(System.in);
         int num;
         num = scanner.nextInt();
-        System.out.println(num); System.out.println();System.out.println();System.out.println();
+        System.out.println(num); System.out.println();System.out.println();System.out.println();asdfjkasdjflksjfljasdfjlsdjflsdjfljaslkdfjlksadjfljsdaljflsadjflajsdlfjsaldjflajsdflkjasldfjlasjdfljasdlfjasldjflsadjflasjdfljsadlfjsldajflsadjflsajdflsajdfljsadlfjsaldjflasjdfljsdlfkjasldkjflksajdflasjdlfjasdljflasdjflasjdfljasldfjasldjflasjdfljsadlf
     }
     public static int getNumber() {
         return Math.random();

@@ -30,6 +30,7 @@ public class Editor {
     private final FileBuffer buffer;
     Screen editorScreen;
     private boolean isEditMode;
+    private boolean textWrapEnabled = true;
 
     Set<Integer> foldedLines = null;
 
@@ -99,16 +100,18 @@ public class Editor {
         terminal.putString(String.format("Current File : %s", buffer.savePath));
         nextLine();
         terminal.enableSGR(SGR.BOLD);
-        terminal.putString(String.format("Commands"));
+        terminal.putString("Commands");
         terminal.disableSGR(SGR.BOLD);
         nextLine();
-        terminal.putString(String.format("'CTRL + e' - Edit Selected file"));
+        terminal.putString("'CTRL + e' - Edit Selected file");
         nextLine();
-        terminal.putString(String.format("'CTRL + q' - Quit"));
+        terminal.putString("'CTRL + q' - Quit");
         nextLine();
-        terminal.putString(String.format("'CTRL + s' - Save file"));
+        terminal.putString("'CTRL + s' - Save file");
         nextLine();
-        terminal.putString(String.format("'ESC' - To see the welcome screen"));
+        terminal.putString("'ALT + z' - Toggle soft-wrap");
+        nextLine();
+        terminal.putString("'ESC' - To see the welcome screen");
         terminal.flush();
     }
 
@@ -130,11 +133,12 @@ public class Editor {
     private void render() throws IOException {
         editorScreen.clear();
         int cursorX = 0;
+        TerminalPosition cursorPosition = new TerminalPosition(0, 0);
         for (int i = 0; i < buffer.getNumberOfLines(); i++) {
             String line = buffer.getLine(i);
             int cursorY = 0;
             for (int j = 0; j < line.length(); j++) {
-                if(cursorY > width) { // line folding
+                if(cursorY >= width && textWrapEnabled) { // line folding
                     cursorY = 0;
                     cursorX++;
                 }
@@ -142,27 +146,44 @@ public class Editor {
                         line.charAt(j),
                         TextColor.ANSI.DEFAULT,
                         TextColor.ANSI.DEFAULT));
+                if(j == buffer.getCursorColumn() && i == buffer.getCursorRow())
+                    cursorPosition = new TerminalPosition(buffer.getCursorColumn() % width, cursorX);
+            }
+            if(line.length() == 0 && i == buffer.getCursorRow()) {
+                cursorPosition = new TerminalPosition(0, cursorX);
+            }
+            else if (line.length() == buffer.getCursorColumn() && i == buffer.getCursorRow()) {
+                cursorPosition = new TerminalPosition(line.length() % width, cursorX);
             }
             cursorX++;
         }
+        if(textWrapEnabled)
+            editorScreen.setCursorPosition(cursorPosition);
+        else
+            editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
         editorScreen.refresh();
     }
     private void setCursorPosition(KeyType keyType) throws IOException {
-        int cursorX = buffer.getCursorRow();
-        int cursorY = buffer.getCursorColumn();
-        int prevLineLength = buffer.getLine(cursorX - 1).length();
-        int currentLineLength = buffer.getLine(cursorX).length();
-        if(cursorY > width && (keyType.equals(KeyType.ArrowRight))) {
-            foldedLines.add(cursorX);
+        TerminalPosition cursorPosition = new TerminalPosition(0, 0);
+        int cursorX = 0;
+        for (int i = 0; i < buffer.getNumberOfLines(); i++) {
+            String line = buffer.getLine(i);
+            int cursorY = 0;
+            for (int j = 0; j < line.length(); j++) {
+                if(cursorY >= width) { // line folding
+                    cursorY = 0;
+                    cursorX++;
+                }
+                cursorY++;
+                if(j == buffer.getCursorColumn() && i == buffer.getCursorRow())
+                    cursorPosition = new TerminalPosition(buffer.getCursorColumn() % width, cursorX);
+            }
+            if(line.length() == 0 && i == buffer.getCursorRow()) {
+                cursorPosition = new TerminalPosition(0, cursorX);
+            }
+            cursorX++;
         }
-        if(cursorY < width && keyType.equals(KeyType.ArrowLeft)) {
-            foldedLines.remove(cursorX);
-        }
-        if (prevLineLength > width && (keyType.equals(KeyType.ArrowDown) || keyType.equals(KeyType.ArrowRight))) {
-            editorScreen.setCursorPosition(new TerminalPosition(0, cursorX + currentLineLength / width));
-        } else {
-            editorScreen.setCursorPosition(new TerminalPosition(cursorY % width, cursorX + cursorY / width));
-        }
+        editorScreen.setCursorPosition(cursorPosition);
         editorScreen.refresh();
     }
 
@@ -186,7 +207,12 @@ public class Editor {
                 buffer.insert(' ');
             }
             updateBufferAndScreen();
-        } else {
+        }
+        else if (keyStroke.isAltDown() && keyStroke.getCharacter().equals('z')) {
+            textWrapEnabled = !textWrapEnabled;
+            render();
+        }
+        else if(keyStroke.getKeyType().equals(KeyType.Character)) {
             buffer.insert(keyStroke.getCharacter());
             updateBufferAndScreen();
         }
@@ -195,7 +221,6 @@ public class Editor {
     private void updateBufferAndScreen() throws IOException {
         buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
         render();
-        setCursorPosition(KeyType.Unknown);
     }
 
     private void moveUp() throws IOException {
@@ -212,8 +237,7 @@ public class Editor {
 //            }
 //            editorScreen.refresh();
         }
-        setCursorPosition(KeyType.ArrowUp);
-
+        render();
     }
 
     public void moveDown() throws IOException {
@@ -228,7 +252,7 @@ public class Editor {
 //                editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
 //            }
 //            editorScreen.refresh();
-            setCursorPosition(KeyType.ArrowDown);
+            render();
         }
     }
 
@@ -238,13 +262,13 @@ public class Editor {
         if (buffer.getCursorColumn() != 0) {
             buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() - 1);
         }
-        setCursorPosition(KeyType.ArrowLeft);
+        render();
     }
 
     public void moveRight() throws IOException {
         if (buffer.getCursorColumn() != buffer.getLine(buffer.getCursorRow()).length()) {
             buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() + 1);
         }
-        setCursorPosition(KeyType.ArrowRight);
+        render();
     }
 }
