@@ -1,0 +1,13 @@
+import java.io.*;
+
+public class Solution {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int num;
+        num = scanner.nextInt();
+        System.out.println(num); System.out.println();System.out.println();System.out.println();
+    }
+    public static int getNumber() {
+        return Math.random();
+    }
+}
