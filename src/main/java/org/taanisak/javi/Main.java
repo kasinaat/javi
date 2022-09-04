@@ -3,7 +3,6 @@ package org.taanisak.javi;
 import org.taanisak.javi.models.FileBuffer;
 import org.taanisak.javi.views.Editor;
 
-import java.io.Console;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
