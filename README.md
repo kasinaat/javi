@@ -2,8 +2,8 @@
 
 ### How to run :
 * Navigate to bin/ folder
-* For Windows - javi.bat <filename>
-* For Linux - ./javi.sh <filename> - Untested
+* For Windows - javi.bat \<filename\>
+* For Linux - ./javi.sh \<filename\> - Untested
 
 ### Supported Operations
 
