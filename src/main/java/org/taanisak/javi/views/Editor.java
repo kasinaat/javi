@@ -13,10 +13,12 @@ import com.googlecode.lanterna.terminal.Terminal;
 import org.taanisak.javi.models.FileBuffer;
 import org.taanisak.javi.models.Position;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 public class Editor {
@@ -27,7 +29,8 @@ public class Editor {
     private final Position origin = new Position(0, 0);
 
     private final Position currentPosition = new Position(0, 0);
-    private final FileBuffer buffer;
+    private final List<FileBuffer> filesList;
+    private FileBuffer currentFile = null;
     Screen editorScreen;
     private boolean isEditMode;
     private boolean textWrapEnabled = true;
@@ -35,7 +38,9 @@ public class Editor {
     Set<Integer> foldedLines = null;
 
     public Editor(FileBuffer buffer) throws IOException {
-        this.buffer = buffer;
+        this.filesList = new ArrayList<>();
+        this.filesList.add(buffer);
+        this.currentFile = buffer;
         terminal = new DefaultTerminalFactory().createTerminal();
         terminal.setCursorVisible(true);
         height = terminal.getTerminalSize().getRows();
@@ -61,7 +66,20 @@ public class Editor {
                 } else if (keyStroke.isCtrlDown() && keyStroke.getCharacter() == 'q') {
                     closeEditor();
                     break;
-                } else if (isEditMode) {
+                }
+                else if(keyStroke.isCtrlDown() && keyStroke.getCharacter() == 'o') {
+                    String newFileName = openFile();
+                    saveFile();
+                    FileBuffer fileBuffer = new FileBuffer(Paths.get(newFileName));
+                    filesList.add(fileBuffer);
+                    currentFile = fileBuffer;
+                    displayWelcomeScreen();
+                    break;
+                }
+                else if (keyStroke.isCtrlDown() && keyStroke.getKeyType().equals(KeyType.Tab)) {
+                    initEditMode();
+                }
+                else if (isEditMode) {
                     editBuffer(keyStroke);
                 }
 
@@ -74,6 +92,43 @@ public class Editor {
 //            }
         }
     }
+    private String openFile() throws IOException {
+        terminal.clearScreen();
+        terminal.setCursorPosition(0, 0);
+        terminal.enableSGR(SGR.BOLD);
+        terminal.putString("JAVI - Your Text Editor");
+        terminal.disableSGR(SGR.BOLD);
+        nextLine();
+        terminal.putString(String.format("Current File : %s", currentFile.savePath));
+        nextLine();
+        terminal.putString("Enter file name to open : ");
+        terminal.flush();
+        int cursorX = 2;
+        int cursorY = 25;
+        StringBuilder newFileName = new StringBuilder();
+        terminal.setCursorPosition(new TerminalPosition(cursorY,cursorX));
+        while(true){
+            KeyStroke key = terminal.pollInput();
+            if(key != null) {
+                if(key.getKeyType().equals(KeyType.Character)) {
+                    terminal.putCharacter(key.getCharacter());
+                    newFileName.append(key.getCharacter());
+                    terminal.setCursorPosition(new TerminalPosition(++cursorY,cursorX));
+                    terminal.flush();
+                }
+                if (key.getKeyType().equals(KeyType.Backspace) && newFileName.length() > 0) {
+                    terminal.setCursorPosition(new TerminalPosition(--cursorY,cursorX));
+                    newFileName.deleteCharAt(newFileName.length() - 1);
+                    terminal.putCharacter(' ');
+                    terminal.setCursorPosition(new TerminalPosition(cursorY,cursorX));
+                    terminal.flush();
+                }
+                if (key.getKeyType().equals(KeyType.Enter)) {
+                    return newFileName.toString();
+                }
+            }
+        }
+    }
 
     private void closeEditor() throws IOException {
         if(editorScreen != null)
@@ -82,7 +137,7 @@ public class Editor {
     }
 
     private void saveFile() throws IOException {
-        buffer.save();
+        currentFile.save();
     }
 
     private void exitEditMode() throws IOException {
@@ -97,9 +152,17 @@ public class Editor {
         terminal.putString("JAVI - Your Text Editor");
         terminal.disableSGR(SGR.BOLD);
         nextLine();
-        terminal.putString(String.format("Current File : %s", buffer.savePath));
         nextLine();
+        terminal.putString("Current File : ");
         terminal.enableSGR(SGR.BOLD);
+        terminal.putString(currentFile.savePath.toString());
+        nextLine();
+        terminal.disableSGR(SGR.BOLD);
+        terminal.putString("List of Files Open : ");
+        terminal.enableSGR(SGR.BOLD);
+        terminal.putString(filesList.toString());
+        nextLine();
+        nextLine();
         terminal.putString("Commands");
         terminal.disableSGR(SGR.BOLD);
         nextLine();
@@ -110,6 +173,8 @@ public class Editor {
         terminal.putString("'CTRL + s' - Save file");
         nextLine();
         terminal.putString("'ALT + z' - Toggle soft-wrap");
+        nextLine();
+        terminal.putString("'CTRL + o' - To create or open a new file");
         nextLine();
         terminal.putString("'ESC' - To see the welcome screen");
         terminal.flush();
@@ -134,8 +199,8 @@ public class Editor {
         editorScreen.clear();
         int cursorX = 0;
         TerminalPosition cursorPosition = new TerminalPosition(0, 0);
-        for (int i = 0; i < buffer.getNumberOfLines(); i++) {
-            String line = buffer.getLine(i);
+        for (int i = 0; i < currentFile.getNumberOfLines(); i++) {
+            String line = currentFile.getLine(i);
             int cursorY = 0;
             for (int j = 0; j < line.length(); j++) {
                 if(cursorY >= width && textWrapEnabled) { // line folding
@@ -146,13 +211,13 @@ public class Editor {
                         line.charAt(j),
                         TextColor.ANSI.DEFAULT,
                         TextColor.ANSI.DEFAULT));
-                if(j == buffer.getCursorColumn() && i == buffer.getCursorRow())
-                    cursorPosition = new TerminalPosition(buffer.getCursorColumn() % width, cursorX);
+                if(j == currentFile.getCursorColumn() && i == currentFile.getCursorRow())
+                    cursorPosition = new TerminalPosition(currentFile.getCursorColumn() % width, cursorX);
             }
-            if(line.length() == 0 && i == buffer.getCursorRow()) {
+            if(line.length() == 0 && i == currentFile.getCursorRow()) {
                 cursorPosition = new TerminalPosition(0, cursorX);
             }
-            else if (line.length() == buffer.getCursorColumn() && i == buffer.getCursorRow()) {
+            else if (line.length() == currentFile.getCursorColumn() && i == currentFile.getCursorRow()) {
                 cursorPosition = new TerminalPosition(line.length() % width, cursorX);
             }
             cursorX++;
@@ -160,30 +225,7 @@ public class Editor {
         if(textWrapEnabled)
             editorScreen.setCursorPosition(cursorPosition);
         else
-            editorScreen.setCursorPosition(new TerminalPosition(buffer.getCursorColumn(), buffer.getCursorRow()));
-        editorScreen.refresh();
-    }
-    private void setCursorPosition(KeyType keyType) throws IOException {
-        TerminalPosition cursorPosition = new TerminalPosition(0, 0);
-        int cursorX = 0;
-        for (int i = 0; i < buffer.getNumberOfLines(); i++) {
-            String line = buffer.getLine(i);
-            int cursorY = 0;
-            for (int j = 0; j < line.length(); j++) {
-                if(cursorY >= width) { // line folding
-                    cursorY = 0;
-                    cursorX++;
-                }
-                cursorY++;
-                if(j == buffer.getCursorColumn() && i == buffer.getCursorRow())
-                    cursorPosition = new TerminalPosition(buffer.getCursorColumn() % width, cursorX);
-            }
-            if(line.length() == 0 && i == buffer.getCursorRow()) {
-                cursorPosition = new TerminalPosition(0, cursorX);
-            }
-            cursorX++;
-        }
-        editorScreen.setCursorPosition(cursorPosition);
+            editorScreen.setCursorPosition(new TerminalPosition(currentFile.getCursorColumn(), currentFile.getCursorRow()));
         editorScreen.refresh();
     }
 
@@ -197,14 +239,14 @@ public class Editor {
         } else if (keyStroke.getKeyType().equals(KeyType.ArrowDown)) {
             moveDown();
         } else if (keyStroke.getKeyType().equals(KeyType.Enter)) {
-            buffer.insert('\n');
+            currentFile.insert('\n');
             updateBufferAndScreen();
         } else if (keyStroke.getKeyType().equals(KeyType.Backspace)) {
-            buffer.delete();
+            currentFile.delete();
             updateBufferAndScreen();
         } else if (keyStroke.getKeyType().equals(KeyType.Tab)) {
             for (int i = 0; i < TAB_SIZE; i++) {
-                buffer.insert(' ');
+                currentFile.insert(' ');
             }
             updateBufferAndScreen();
         }
@@ -213,19 +255,19 @@ public class Editor {
             render();
         }
         else if(keyStroke.getKeyType().equals(KeyType.Character)) {
-            buffer.insert(keyStroke.getCharacter());
+            currentFile.insert(keyStroke.getCharacter());
             updateBufferAndScreen();
         }
     }
 
     private void updateBufferAndScreen() throws IOException {
-        buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn());
+        currentFile.setCursor(currentFile.getCursorRow(), currentFile.getCursorColumn());
         render();
     }
 
     private void moveUp() throws IOException {
-        if (buffer.hasLine(buffer.getCursorRow() - 1)) {
-            buffer.setCursor(buffer.getCursorRow() - 1, buffer.getCursorColumn());
+        if (currentFile.hasLine(currentFile.getCursorRow() - 1)) {
+            currentFile.setCursor(currentFile.getCursorRow() - 1, currentFile.getCursorColumn());
 //            show();
 //            int prevLineLength = buffer.getLine(buffer.getCursorRow()).length();
 //            int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
@@ -241,8 +283,8 @@ public class Editor {
     }
 
     public void moveDown() throws IOException {
-        if (buffer.hasLine(buffer.getCursorRow() + 1)) {
-            buffer.setCursor(buffer.getCursorRow() + 1, buffer.getCursorColumn());
+        if (currentFile.hasLine(currentFile.getCursorRow() + 1)) {
+            currentFile.setCursor(currentFile.getCursorRow() + 1, currentFile.getCursorColumn());
 //            show();
 //            int nextLineLength = buffer.getLine(buffer.getCursorRow()).length();
 //            int currentLineLength = buffer.getLine(buffer.getCursorRow()).length();
@@ -257,17 +299,17 @@ public class Editor {
     }
 
     public void moveLeft() throws IOException {
-        if (buffer.getCursorRow() == 0 && buffer.getCursorColumn() == 0) return;
+        if (currentFile.getCursorRow() == 0 && currentFile.getCursorColumn() == 0) return;
 
-        if (buffer.getCursorColumn() != 0) {
-            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() - 1);
+        if (currentFile.getCursorColumn() != 0) {
+            currentFile.setCursor(currentFile.getCursorRow(), currentFile.getCursorColumn() - 1);
         }
         render();
     }
 
     public void moveRight() throws IOException {
-        if (buffer.getCursorColumn() != buffer.getLine(buffer.getCursorRow()).length()) {
-            buffer.setCursor(buffer.getCursorRow(), buffer.getCursorColumn() + 1);
+        if (currentFile.getCursorColumn() != currentFile.getLine(currentFile.getCursorRow()).length()) {
+            currentFile.setCursor(currentFile.getCursorRow(), currentFile.getCursorColumn() + 1);
         }
         render();
     }

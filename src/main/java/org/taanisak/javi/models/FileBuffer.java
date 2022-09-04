@@ -9,7 +9,12 @@ import java.util.ArrayList;
 public class FileBuffer extends Buffer { //Receiver class
     public Path savePath = null;
 
-    public FileBuffer(Path path) throws IOException {
+    @Override
+    public String toString() {
+        return savePath.toString();
+    }
+
+    public FileBuffer( Path path) throws IOException {
         open(path);
     }
 
