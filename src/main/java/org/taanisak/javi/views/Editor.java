@@ -13,7 +13,6 @@ import com.googlecode.lanterna.terminal.Terminal;
 import org.taanisak.javi.models.FileBuffer;
 import org.taanisak.javi.models.Position;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -26,7 +25,7 @@ public class Editor {
     private final Terminal terminal;
     private final int width;
     private final int height;
-    private final Position origin = new Position(0, 0);
+    private int currentFileCounter = 0;
 
     private final Position currentPosition = new Position(0, 0);
     private final List<FileBuffer> filesList;
@@ -68,31 +67,30 @@ public class Editor {
                     break;
                 }
                 else if(keyStroke.isCtrlDown() && keyStroke.getCharacter() == 'o') {
-                    String newFileName = openFile();
+                    String newFileName = createOrOpenFile();
                     saveFile();
                     FileBuffer fileBuffer = new FileBuffer(Paths.get(newFileName));
                     filesList.add(fileBuffer);
                     currentFile = fileBuffer;
                     displayWelcomeScreen();
-                    break;
                 }
                 else if (keyStroke.isCtrlDown() && keyStroke.getKeyType().equals(KeyType.Tab)) {
+                    saveFile();
+                    if(currentFileCounter == filesList.size() - 1) {
+                        currentFileCounter = 0;
+                    } else {
+                        currentFileCounter++;
+                    }
+                    currentFile = filesList.get(currentFileCounter);
                     initEditMode();
                 }
                 else if (isEditMode) {
                     editBuffer(keyStroke);
                 }
-
             }
-//
-//            try {
-//                Thread.sleep(500);
-//            } catch (InterruptedException ie) {
-//                ie.printStackTrace();
-//            }
         }
     }
-    private String openFile() throws IOException {
+    private String createOrOpenFile() throws IOException {
         terminal.clearScreen();
         terminal.setCursorPosition(0, 0);
         terminal.enableSGR(SGR.BOLD);
@@ -107,7 +105,7 @@ public class Editor {
         int cursorY = 25;
         StringBuilder newFileName = new StringBuilder();
         terminal.setCursorPosition(new TerminalPosition(cursorY,cursorX));
-        while(true){
+        while(true) {
             KeyStroke key = terminal.pollInput();
             if(key != null) {
                 if(key.getKeyType().equals(KeyType.Character)) {
@@ -176,6 +174,8 @@ public class Editor {
         nextLine();
         terminal.putString("'CTRL + o' - To create or open a new file");
         nextLine();
+        terminal.putString("'CTRL + TAB' - Cycle through open files");
+        nextLine();
         terminal.putString("'ESC' - To see the welcome screen");
         terminal.flush();
     }
@@ -186,6 +186,7 @@ public class Editor {
 
     public void initEditMode() throws IOException {
         this.isEditMode = true;
+//        terminal.setTitle(String.valueOf(currentFile));
         editorScreen = new TerminalScreen(terminal);
         editorScreen.startScreen();
         terminal.clearScreen();
