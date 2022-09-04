@@ -3,6 +3,7 @@
 * Navigate to bin/ folder
 * For Windows - javi.bat <filename>
 * For Linux - ./javi.sh <filename> - Untested
+
 ###Supported Operations
 * 'CTRL + e' - Edit Selected file
 * 'CTRL + q' - Quit
