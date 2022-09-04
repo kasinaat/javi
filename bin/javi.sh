@@ -6,4 +6,4 @@ fi
 for i in ../lib/*.jar; do
     CLASSPATH=$CLASSPATH:$i
 done
-java -cp $CLASSPATH -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005 org.taanisak.javi.Main $1
+java -cp $CLASSPATH org.taanisak.javi.Main $1
