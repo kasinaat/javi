@@ -40,7 +40,7 @@ public class Editor {
         this.filesList = new ArrayList<>();
         this.filesList.add(buffer);
         this.currentFile = buffer;
-        terminal = new DefaultTerminalFactory().createTerminal();
+        terminal = new DefaultTerminalFactory().createTerminalEmulator();
         terminal.setCursorVisible(true);
         height = terminal.getTerminalSize().getRows();
         width = terminal.getTerminalSize().getColumns();
